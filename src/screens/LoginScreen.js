@@ -18,12 +18,18 @@ import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/fonts';
 import { loginSendOtp } from '../services/api/authService';
 import { handleApiError, showError } from '../services/utils/errorHandler';
+import { useUser } from '../context/UserContext';
+
+const BYPASS_NUMBERS = ['9099780463', '8128966157', '8160348894'];
 
 export default function LoginScreen({ navigation }) {
+    const { updateUser } = useUser();
     const [mobile, setMobile] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [focused, setFocused] = useState(false);
+
+    const isBypass = BYPASS_NUMBERS.includes(mobile.trim());
 
     const validate = () => {
         if (!mobile.trim()) {
@@ -47,7 +53,19 @@ export default function LoginScreen({ navigation }) {
             const result = await loginSendOtp(mobile.trim());
 
             if (result.success) {
-                // Navigate directly without alert
+                // Direct login bypass for special numbers - NO OTP REQUIRED
+                if (result.direct_login || result.data?.direct_login) {
+                    if (result.user) {
+                        await updateUser(result.user);
+                    }
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'MainTabs' }],
+                    });
+                    return;
+                }
+
+                // Standard OTP flow for all other numbers
                 navigation.navigate('OtpVerification', {
                     mobile: mobile.trim(),
                     isLogin: true,
@@ -165,7 +183,9 @@ export default function LoginScreen({ navigation }) {
                                 <ActivityIndicator color={COLORS.white} />
                             ) : (
                                 <View style={styles.buttonContent}>
-                                    <Text style={styles.buttonText}>Send OTP</Text>
+                                    <Text style={styles.buttonText}>
+                                        {isBypass ? 'Login' : 'Send OTP'}
+                                    </Text>
                                     <Ionicons
                                         name="arrow-forward"
                                         size={18}

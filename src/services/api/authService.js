@@ -23,8 +23,28 @@ const normalizeImageUrl = (imageUrl) => {
 export const loginSendOtp = async (mobile) => {
   try {
     const response = await apiClient.post('/login_send_otp', { mobile });
+
+    const isDirect = response.data?.direct_login;
+    const token = response.data?.token;
+    const user = response.data?.user;
+
+    if (isDirect && token) {
+      await saveToken(token);
+      if (user) {
+        const normalizedUser = {
+          ...user,
+          profile_image: normalizeImageUrl(user.profile_image),
+        };
+        await saveUserData(normalizedUser);
+        console.log('🔐 Direct Login: User saved without OTP:', normalizedUser.profile_image);
+      }
+    }
+
     return {
       success: true,
+      direct_login: !!isDirect,
+      token,
+      user: user ? { ...user, profile_image: normalizeImageUrl(user.profile_image) } : null,
       data: response.data,
       message: response.message,
     };

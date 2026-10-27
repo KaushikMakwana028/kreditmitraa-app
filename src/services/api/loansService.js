@@ -64,7 +64,7 @@ export const applyLoan = async (payload) => {
         return {
             success: false,
             message: error.message,
-            data: null,
+            data: error.data?.data || null,
         };
     }
 };
@@ -105,6 +105,36 @@ export const calculateLoan = async (payload) => {
         return {
             success: false,
             message: error.message,
+            data: error.data?.data || null,
+        };
+    }
+};
+
+/**
+ * Get dynamic loan credit limit and active loan summary from API
+ * @returns {Promise}
+ */
+export const getLoanLimit = async () => {
+    try {
+        const response = await apiClient.get('/loans');
+        const d = response.data;
+        return {
+            success: true,
+            data: d?.loan_limit || {
+                credit_limit: d?.credit_limit ?? 0,
+                remaining_limit: d?.remaining_limit ?? 0,
+                active_loans_count: d?.active_loans_count ?? 0,
+                active_loans_total_amount: d?.active_loans_total_amount ?? 0,
+                can_apply: d?.can_apply_loan ?? false,
+                block_reason: d?.loan_limit?.block_reason ?? null,
+            },
+            message: response.message,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            message: error.message,
+            data: null,
         };
     }
 };
